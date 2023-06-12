@@ -1,0 +1,3 @@
+# Implementation-of-Image-Steganography-Using-LSB-Algorithm
+This repository contains a MATLAB implementation of a program that can embed a secret image into a cover image using Least Significant Bit (LSB) steganography and Advanced Encryption Standard (AES) encryption. The user can enter an encryption key, which is used to encrypt the secret image before it is embedded into the cover image.
+[![Open in MATLAB Online](https://www.mathworks.com/images/responsive/global/open-in-matlab-online.svg)](https://matlab.mathworks.com/open/github/v1?repo=KIRANKUMARS3201/Implementation-of-Image-Steganography-Using-LSB-Algorithm)

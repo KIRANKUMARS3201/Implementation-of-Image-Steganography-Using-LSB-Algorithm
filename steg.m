@@ -1,83 +1,90 @@
-% Load cover and secret images
-cover = imread('cover.jpg');
-secret = imread('secret.jpg');
+function [encoded_image] = embedLSB(cover_image, secret_image, key)
+% Embeds a secret image into a cover image using LSB steganography and AES encryption.
 
-% Get encryption key from user input
-key = input('Enter encryption key: ', 's');
+% Check if cover image and secret image are the same size
+if size(cover_image) ~= size(secret_image)
+    error('Cover image and secret image must be the same size.');
+end
 
-% Embed secret image into cover image
-encoded = embedLSB(cover, secret, key);
+% Resize secret image to match cover dimensions
+secret_image_resized = imresize(secret_image, size(cover_image));
 
-% Save encoded image
-imwrite(encoded, 'encoded.png');
+% Convert secret image to binary
+secret_image_bin = dec2bin(secret_image_resized(:));
 
-% Extract and decode secret image
-secret_decoded = decodeLSB(encoded, key, size(secret));
-
-% Save decoded secret image
-imwrite(secret_decoded, 'secret_decoded.jpg');
-
-% Embed secret into cover using LSB steganography and AES encryption
-function encoded = embedLSB(cover, secret, key)
-% Resize secret to match cover dimensions
-secret_resized = imresize(secret, [size(cover, 1), size(cover, 2)]);
-
-% Convert secret to binary
-secret_bin = reshape(dec2bin(secret_resized), [], 1);
-
-% Encrypt secret using AES
-secret_encrypted = AES_encrypt(secret_bin, key);
+% Encrypt secret image using AES
+secret_image_encrypted = AESEncrypt(secret_image_bin, key);
 
 % Embed encrypted secret bits into cover pixels
-encoded = cover;  % initialize encoded image with cover
-for i = 1:3  % loop over color channels (red, green, blue)
-    % Convert cover to binary
-    cover_bin = dec2bin(cover(:,:,i));
-    
+encoded_image = cover_image;
+for i = 1:3
+    % Convert cover image to binary
+    cover_image_bin = dec2bin(cover_image(:, :, i));
+
     % Embed encrypted secret in LSB of each cover pixel
-    cover_bin(:, end) = secret_encrypted(:, i);  
-    encoded(:,:,i) = uint8(bin2dec(cover_bin));
-end
+    cover_image_bin(:, :, end) = secret_image_encrypted(:, i);
+    encoded_image(:, :, i) = bin2dec(cover_image_bin);
 end
 
-% Decode secret from encoded image using LSB steganography and AES decryption
-function secret_decoded = decodeLSB(encoded, key, secret_size)
+end
+
+function [secret_image_decrypted] = decodeLSB(encoded_image, key, secret_image_size)
+% Decodes a secret image from an encoded image using LSB steganography and AES decryption.
+
 % Extract encrypted secret bits from LSB of each encoded pixel
-secret_encrypted = zeros(size(encoded,1), size(encoded,2), 3);  % initialize secret encrypted binary image
-for i = 1:3  % loop over color channels (red, green, blue)
-    encoded_bin = dec2bin(encoded(:,:,i));
-    secret_encrypted(:, :, i) = encoded_bin(:, end);
-end
+secret_image_encrypted = encoded_image(:, :, end)[-secret_image_size(1):end, -secret_image_size(2):end];
 
-% Decrypt secret using AES
-secret_bin = AES_decrypt(secret_encrypted, key);
+% Decrypt secret image using AES
+secret_image_bin = AESDecrypt(secret_image_encrypted, key);
 
 % Convert secret bits to decimal and reshape to original image size
-secret_decoded = bin2dec(secret_bin);
-secret_decoded = reshape(secret_decoded, secret_size);
+secret_image_decrypted = bin2dec(secret_image_bin);
+secret_image_decrypted = reshape(secret_image_decrypted, secret_image_size);
+
 end
 
-% AES encryption function
-function encrypted = AES_encrypt(data, key)
-% Pad data to multiple of 16 bytes
-data_padded = padarray(data, mod(16 - mod(numel(data), 16), 16), '0', 'post');
+function [encrypted_data] = AESEncrypt(data, key)
+% Encrypts data using AES encryption.
 
-% Encrypt data with AES
-encrypted = reshape(dec2hex(AES_Cipher(data_padded, key)), [], 2);
+cipher = Cipher('AES', key);
+encrypted_data = encrypt(cipher, data);
 
-% Convert to binary
-encrypted = dec2bin(hex2dec(encrypted(:)), 8)';
-encrypted = reshape(encrypted, [], 3, 16);
 end
 
-% AES decryption function
-function decrypted = AES_decrypt(data, key)
-% Convert to hexadecimal
-data_hex = dec2hex(bin2dec(reshape(data, [], 8))');
+function [decrypted_data] = AESDecrypt(encrypted_data, key)
+% Decrypts data using AES encryption.
 
-% Decrypt data with AES
-decrypted = AES_Decipher(reshape(data_hex, [], 32), key);
+cipher = Cipher('AES', key);
+decrypted_data = decrypt(cipher, encrypted_data);
 
-% Convert to binary
-decrypted = reshape(dec2bin(hex2dec(decrypted(:)), 8)', [], 1);
 end
+
+% Function to generate a random encryption key
+function key = generateRandomKey()
+% Generates a random 16-byte encryption key.
+
+key = rng(12345); % Set random seed for reproducibility
+key = randbytes(16);
+
+end
+
+% Example usage:
+
+% Generate a random encryption key
+key = generateRandomKey();
+
+% Load cover and secret images
+cover_image = imread('cover.jpg');
+secret_image = imread('secret.jpg');
+
+% Embed secret image into cover image
+encoded_image = embedLSB(cover_image, secret_image, key);
+
+% Save encoded image
+imwrite(encoded_image, 'encoded.png');
+
+% Extract and decode secret image
+secret_image_decrypted = decodeLSB(encoded_image, key, size(secret_image));
+
+% Save decoded secret image
+imwrite(secret_image_decrypted, 'secret_decoded.jpg');
